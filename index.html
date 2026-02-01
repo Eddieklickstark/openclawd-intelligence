@@ -383,7 +383,7 @@
                 vec3 viewDir = normalize(cameraPosition - vWorldPosition);
 
                 float speed = mix(0.08, 0.28, uActivity);
-                float time = uTime * speed;
+                float time = mod(uTime * speed, 100.0);
 
                 float fresnel = pow(1.0 - max(dot(viewDir, normal), 0.0), 5.0);
                 float softFresnel = pow(1.0 - max(dot(viewDir, normal), 0.0), 2.5);
