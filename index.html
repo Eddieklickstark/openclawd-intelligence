@@ -3,17 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="OpenClawd Intelligence - Premium AI Assistant Interface">
     <title>OpenClawd Intelligence</title>
-    <link rel="stylesheet" href="/src/styles/main.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f5f5f7; color: #1d1d1f; overflow: hidden; height: 100vh; }
+        #canvas-container { position: fixed; inset: 0; z-index: 1; }
+        .ui-overlay { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 2.5rem 2rem; pointer-events: none; }
+        .status-bar { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; }
+        .status-text { padding: 0.55rem 1.6rem; border-radius: 980px; background: rgba(255,255,255,0.88); backdrop-filter: blur(30px); box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+        .status-text span { color: #1d1d1f; font-size: 13px; font-weight: 500; }
+        .indicators { display: flex; gap: 1.25rem; }
+        .indicator { display: flex; align-items: center; gap: 6px; opacity: 0.3; transition: opacity 0.6s; }
+        .indicator.active { opacity: 1; }
+        .indicator-dot { width: 7px; height: 7px; border-radius: 50%; background: #86868b; transition: all 0.5s; }
+        .indicator.active .indicator-dot { animation: pulse 2s infinite; }
+        .indicator.listen.active .indicator-dot { background: #34c759; box-shadow: 0 0 8px rgba(52,199,89,0.5); }
+        .indicator.process.active .indicator-dot { background: #ff9f0a; box-shadow: 0 0 8px rgba(255,159,10,0.5); }
+        .indicator.speak.active .indicator-dot { background: #007aff; box-shadow: 0 0 8px rgba(0,122,255,0.5); }
+        @keyframes pulse { 50% { transform: scale(1.35); opacity: 0.7; } }
+        .indicator-label { font-size: 11px; color: #86868b; font-weight: 500; }
+        .activate-btn { pointer-events: auto; padding: 14px 32px; border-radius: 980px; border: none; background: #1d1d1f; color: #fff; font-size: 15px; font-weight: 500; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.12); transition: all 0.35s; }
+        .activate-btn:hover:not(:disabled) { transform: scale(1.025); }
+        .activate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .input-section { width: 100%; max-width: 520px; pointer-events: auto; }
+        .input-field { width: 100%; padding: 16px 72px 16px 20px; border-radius: 14px; border: none; background: rgba(255,255,255,0.92); font-size: 16px; backdrop-filter: blur(30px); box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+        .input-field::placeholder { color: #86868b; }
+        .send-btn { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); padding: 10px 18px; border-radius: 10px; border: none; background: #007aff; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .footer span { color: #86868b; font-size: 11px; }
+        .response-box { padding: 16px 20px; border-radius: 14px; background: rgba(255,255,255,0.92); backdrop-filter: blur(30px); max-height: 160px; overflow-y: auto; }
+        .response-text { color: #1d1d1f; font-size: 15px; line-height: 1.5; }
+        .response-text.typing::after { content: '|'; animation: blink 0.53s infinite; color: #007aff; }
+        @keyframes blink { 50% { opacity: 0; } }
+    </style>
 </head>
 <body>
-    <div id="app">
-        <div id="canvas-container"></div>
-        <div id="state-indicator">OpenClawd Intelligence</div>
-        <div id="quality-badge">ULTRA HD</div>
-        <div id="info">Click to cycle: Idle → Listening → Processing → Speaking</div>
+    <div id="canvas-container"></div>
+    <div class="ui-overlay">
+        <div class="status-bar">
+            <div class="status-text"><span id="status">Ready</span></div>
+            <div class="indicators">
+                <div class="indicator listen" id="ind-listen"><div class="indicator-dot"></div><span class="indicator-label">Listen</span></div>
+                <div class="indicator process" id="ind-process"><div class="indicator-dot"></div><span class="indicator-label">Think</span></div>
+                <div class="indicator speak" id="ind-speak"><div class="indicator-dot"></div><span class="indicator-label">Respond</span></div>
+            </div>
+        </div>
+        <button class="activate-btn" id="activate-btn">Tap to Speak</button>
+        <div class="input-section">
+            <div id="response-area" style="display:none;margin-bottom:12px;max-width:520px;width:100%;"><div class="response-box"><p class="response-text" id="response-text"></p></div></div>
+            <div style="position:relative;">
+                <input type="text" class="input-field" id="input-field" placeholder="Ask anything...">
+                <button class="send-btn" id="send-btn">Send</button>
+            </div>
+            <div style="margin-top:16px;text-align:center;"><span class="footer">Powered by Claude</span></div>
+        </div>
     </div>
-    <script type="module" src="/src/main.js"></script>
+    <script>
+        let isListening=false,isProcessing=false,isSpeaking=false,activityLevel=0,targetActivity=0,smoothActivity=0;
+        const container=document.getElementById('canvas-container'),scene=new THREE.Scene();
+        const bgGeo=new THREE.PlaneGeometry(40,40);
+        const bgMat=new THREE.ShaderMaterial({vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,fragmentShader:`varying vec2 vUv;void main(){vec2 c=vUv-0.5;float v=1.0-length(c)*0.25;vec3 t=vec3(0.962,0.962,0.970);vec3 b=vec3(0.910,0.910,0.928);vec3 col=mix(b,t,vUv.y)*v;gl_FragColor=vec4(col,1.0);}`,depthWrite:false});
+        scene.add(new THREE.Mesh(bgGeo,bgMat)).position.z=-10;
+        const camera=new THREE.PerspectiveCamera(42,innerWidth/innerHeight,0.1,1000);camera.position.z=5;
+        const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));container.appendChild(renderer.domElement);
+        const orbGeo=new THREE.IcosahedronGeometry(1.2,64);
+        const orbMat=new THREE.ShaderMaterial({vertexShader:`varying vec3 vN,vP;uniform float uTime,uActivity;void main(){vN=normalize(normalMatrix*normal);vP=position;float d=sin(position.x*3.0+uTime*0.5)*sin(position.y*3.0+uTime*0.4)*0.05*(0.5+uActivity);vec3 p=position+normal*d;gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0);}`,fragmentShader:`varying vec3 vN,vP;uniform float uTime,uActivity;void main(){vec3 vD=normalize(cameraPosition-vP);float f=pow(1.0-max(dot(vD,vN),0.0),3.0);vec3 base=vec3(0.98);vec3 tint=mix(vec3(0.8,0.95,1.0),vec3(1.0,0.9,0.95),vP.y*0.5+0.5);base=mix(base,tint,0.2+f*0.3);base+=vec3(1.0)*f*0.4;gl_FragColor=vec4(base,0.95);}`,uniforms:{uTime:{value:0},uActivity:{value:0}},transparent:true});
+        const orb=new THREE.Mesh(orbGeo,orbMat);scene.add(orb);
+        const clock=new THREE.Clock();
+        function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime();targetActivity=isSpeaking?1:isProcessing?0.5:isListening?0.3:0;activityLevel+=(targetActivity-activityLevel)*0.02;smoothActivity+=(activityLevel-smoothActivity)*0.015;orbMat.uniforms.uTime.value=t;orbMat.uniforms.uActivity.value=smoothActivity;camera.position.x=Math.sin(t*0.1)*0.05;camera.lookAt(0,0,0);renderer.render(scene,camera);}animate();
+        window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+        const statusEl=document.getElementById('status'),activateBtn=document.getElementById('activate-btn'),inputField=document.getElementById('input-field'),sendBtn=document.getElementById('send-btn');
+        const responses=["I've analyzed your request.","Here's what I discovered.","I understand. Let me help.","Based on my analysis..."];
+        function updateIndicators(){document.getElementById('ind-listen').classList.toggle('active',isListening);document.getElementById('ind-process').classList.toggle('active',isProcessing);document.getElementById('ind-speak').classList.toggle('active',isSpeaking);}
+        function typeResponse(text){document.getElementById('response-area').style.display='block';const rt=document.getElementById('response-text');rt.textContent='';rt.classList.add('typing');let i=0;const iv=setInterval(()=>{if(i<text.length){rt.textContent+=text[i];i++;}else{clearInterval(iv);rt.classList.remove('typing');}},16);}
+        function handleInteraction(){if(isProcessing||isSpeaking)return;isListening=true;statusEl.textContent='Listening...';activateBtn.textContent='Listening...';activateBtn.disabled=true;updateIndicators();setTimeout(()=>{isListening=false;isProcessing=true;statusEl.textContent='Thinking...';activateBtn.textContent='Processing...';updateIndicators();setTimeout(()=>{isProcessing=false;isSpeaking=true;statusEl.textContent='Responding';activateBtn.textContent='Speaking...';updateIndicators();const r=responses[Math.floor(Math.random()*responses.length)];typeResponse(r);setTimeout(()=>{isSpeaking=false;statusEl.textContent='Ready';activateBtn.textContent='Tap to Speak';activateBtn.disabled=false;updateIndicators();},2000+r.length*16);},1500);},1500);}
+        activateBtn.addEventListener('click',handleInteraction);
+        inputField.addEventListener('keypress',e=>{if(e.key==='Enter'&&inputField.value.trim()){handleInteraction();inputField.value='';}});
+        sendBtn.addEventListener('click',()=>{if(inputField.value.trim()){handleInteraction();inputField.value='';}});
+    </script>
 </body>
 </html>
