@@ -54,7 +54,8 @@ class OpenClawdIntelligence {
 
     _setupScene() {
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0xf2f2f7);
+        // Dark background like klickstark.de
+        this.scene.background = new THREE.Color(0x0a0a12);
 
         this.camera = new THREE.PerspectiveCamera(
             45,

@@ -118,22 +118,22 @@ vec3 thinFilmInterference(float cosTheta, float thickness) {
 vec3 sampleEnvMap(vec3 dir) {
     float y = dir.y * 0.5 + 0.5;
 
-    // Soft studio lighting gradient
-    vec3 skyTop = vec3(0.95, 0.97, 1.0);
-    vec3 skyBot = vec3(0.85, 0.88, 0.92);
+    // Dark studio environment
+    vec3 skyTop = vec3(0.08, 0.08, 0.12);
+    vec3 skyBot = vec3(0.04, 0.04, 0.07);
     vec3 sky = mix(skyBot, skyTop, y);
 
-    // Key light (warm)
+    // Red accent light
     float keyLight = pow(max(0.0, dot(dir, normalize(vec3(1.0, 0.8, 0.5)))), 32.0);
-    sky += vec3(1.0, 0.95, 0.9) * keyLight * 0.5;
+    sky += vec3(1.0, 0.3, 0.3) * keyLight * 0.4;
 
-    // Fill light (cool)
+    // Cool fill light
     float fillLight = pow(max(0.0, dot(dir, normalize(vec3(-0.8, 0.3, -0.5)))), 16.0);
-    sky += vec3(0.8, 0.85, 1.0) * fillLight * 0.3;
+    sky += vec3(0.3, 0.35, 0.5) * fillLight * 0.2;
 
-    // Rim accent
+    // Red rim accent
     float rimLight = pow(max(0.0, dot(dir, normalize(vec3(0.0, -0.5, -1.0)))), 8.0);
-    sky += vec3(1.0, 0.9, 0.95) * rimLight * 0.2;
+    sky += vec3(1.0, 0.4, 0.4) * rimLight * 0.3;
 
     return sky;
 }
@@ -184,8 +184,9 @@ void main() {
     vec3 viewDir = normalize(cameraPosition - vWorldPosition);
     vec3 reflectDir = reflect(-viewDir, normal);
 
-    // Base color (opalescent white)
-    vec3 baseColor = vec3(0.96, 0.97, 0.98);
+    // Base color (Klickstark red #ff5353)
+    vec3 klickstarkRed = vec3(1.0, 0.325, 0.325);
+    vec3 baseColor = klickstarkRed * 0.8;
 
     // === IRIDESCENCE ===
     float thickness = 380.0 + vDisplacement * 200.0 + snoise(vPosition * 3.0 + uTime * 0.1) * 80.0;
@@ -236,11 +237,11 @@ void main() {
     // === INTERNAL EFFECTS ===
     float sparkle = sparkles(vPosition, uTime);
     float rays = lightRays(vPosition, uTime);
-    vec3 internalGlow = vec3(0.95, 0.97, 1.0) * (sparkle + rays);
+    vec3 internalGlow = klickstarkRed * 1.2 * (sparkle + rays);
 
     // === SUBSURFACE SCATTERING ===
     float sssDepth = 1.0 - abs(dot(viewDir, normal));
-    vec3 sssColor = vec3(1.0, 0.95, 0.98) * sssDepth * 0.2;
+    vec3 sssColor = klickstarkRed * sssDepth * 0.4;
 
     // === COMBINE ALL ===
     vec3 finalColor = baseColor * 0.4;
@@ -252,12 +253,12 @@ void main() {
     finalColor += internalGlow * (0.5 + uActivity * 0.5);
 
     // Fresnel rim
-    vec3 fresnelColor = vec3(1.0, 0.98, 1.0) * vFresnel * 0.25;
+    vec3 fresnelColor = klickstarkRed * 1.5 * vFresnel * 0.35;
     finalColor += fresnelColor;
 
-    // Activity glow
-    float activityGlow = uActivity * 0.12;
-    finalColor += vec3(0.9, 0.95, 1.0) * activityGlow;
+    // Activity glow (red pulsing)
+    float activityGlow = uActivity * 0.25;
+    finalColor += klickstarkRed * activityGlow;
 
     // Output with slight transparency for bloom pickup
     gl_FragColor = vec4(finalColor, 0.95);
