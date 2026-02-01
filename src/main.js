@@ -89,12 +89,12 @@ class OpenClawdIntelligence {
         const renderPass = new RenderPass(this.scene, this.camera);
         this.composer.addPass(renderPass);
 
-        // 2. Unreal Bloom
+        // 2. Unreal Bloom - subtle and controlled
         this.bloomPass = new UnrealBloomPass(
             new THREE.Vector2(window.innerWidth, window.innerHeight),
-            0.4,   // strength
-            0.4,   // radius
-            0.85   // threshold
+            0.25,  // strength - reduced for elegance
+            0.3,   // radius - tighter
+            0.92   // threshold - higher for subtlety
         );
         this.composer.addPass(this.bloomPass);
 

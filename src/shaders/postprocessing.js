@@ -154,9 +154,9 @@ export const ParticleFragmentShader = /* glsl */`
         float alpha = smoothstep(0.5, 0.0, dist);
         alpha *= vAlpha;
 
-        // Klickstark red particles
-        vec3 color = vec3(1.0, 0.4, 0.4);
-        gl_FragColor = vec4(color, alpha * 0.5);
+        // Elegant warm white particles - very subtle
+        vec3 color = vec3(1.0, 0.97, 0.94);
+        gl_FragColor = vec4(color, alpha * 0.2);
     }
 `;
 
@@ -177,11 +177,11 @@ export const ShadowFragmentShader = /* glsl */`
     void main() {
         vec2 center = vUv - 0.5;
         float dist = length(center) * 2.0;
-        float glow = smoothstep(1.0, 0.0, dist);
-        glow = pow(glow, 1.5);
-        float alpha = glow * (0.15 + uActivity * 0.1);
-        // Red glow beneath the orb
-        vec3 glowColor = vec3(1.0, 0.325, 0.325);
-        gl_FragColor = vec4(glowColor, alpha);
+        float shadow = smoothstep(1.0, 0.0, dist);
+        shadow = pow(shadow, 2.5);
+        float alpha = shadow * (0.12 + uActivity * 0.03);
+        // Soft dark shadow with subtle warm tint
+        vec3 shadowColor = vec3(0.02, 0.015, 0.01);
+        gl_FragColor = vec4(shadowColor, alpha);
     }
 `;
