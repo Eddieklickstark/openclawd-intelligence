@@ -13,27 +13,27 @@ export const STATES = {
 export const STATE_CONFIGS = {
     [STATES.IDLE]: {
         activity: 0,
-        morphSpeed: 0.4,
-        morphIntensity: 0.12,
-        bloom: 0.4
+        morphSpeed: 0.3,
+        morphIntensity: 0.06,  // Very subtle
+        bloom: 0.25
     },
     [STATES.LISTENING]: {
         activity: 0.5,
-        morphSpeed: 0.8,
-        morphIntensity: 0.18,
-        bloom: 0.55
+        morphSpeed: 0.5,
+        morphIntensity: 0.09,
+        bloom: 0.35
     },
     [STATES.PROCESSING]: {
         activity: 0.85,
-        morphSpeed: 1.4,
-        morphIntensity: 0.24,
-        bloom: 0.75
+        morphSpeed: 0.8,
+        morphIntensity: 0.12,
+        bloom: 0.5
     },
     [STATES.SPEAKING]: {
         activity: 1.0,
-        morphSpeed: 1.1,
-        morphIntensity: 0.2,
-        bloom: 0.85
+        morphSpeed: 0.7,
+        morphIntensity: 0.1,
+        bloom: 0.55
     }
 };
 

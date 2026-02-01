@@ -10,7 +10,7 @@ varying vec2 vUv;
 varying float vDisplacement;
 varying float vFresnel;
 
-// ============== 4D SIMPLEX NOISE ==============
+// ============== SMOOTH 4D SIMPLEX NOISE ==============
 
 vec4 permute(vec4 x) {
     return mod(((x * 34.0) + 1.0) * x, 289.0);
@@ -102,17 +102,18 @@ float snoise4D(vec4 v) {
     );
 }
 
-// ============== FRACTAL BROWNIAN MOTION ==============
+// ============== ULTRA-SMOOTH FBM (only 3 octaves, low frequency) ==============
 
-float fbm6(vec4 p) {
+float smoothFbm(vec4 p) {
     float sum = 0.0;
-    float amp = 0.5;
+    float amp = 0.6;
     float freq = 1.0;
 
-    for(int i = 0; i < 6; i++) {
+    // Only 3 octaves for smooth, flowing motion
+    for(int i = 0; i < 3; i++) {
         sum += amp * snoise4D(p * freq);
-        amp *= 0.5;
-        freq *= 2.0;
+        amp *= 0.4;  // Faster falloff = smoother
+        freq *= 1.8; // Slower frequency increase
     }
 
     return sum;
@@ -126,17 +127,20 @@ void main() {
 
     float timeScale = uTime * uMorphSpeed;
 
-    // Multi-layer displacement for organic deformation
-    vec4 noiseCoord = vec4(position * 0.8, timeScale * 0.15);
-    float displacement = fbm6(noiseCoord) * uMorphIntensity;
+    // ULTRA LOW FREQUENCY for smooth, liquid motion
+    // Only one smooth layer - no high-frequency detail
+    vec4 noiseCoord = vec4(position * 0.5, timeScale * 0.12);
+    float displacement = smoothFbm(noiseCoord) * uMorphIntensity;
 
-    // Secondary detail layer
-    vec4 detailCoord = vec4(position * 2.5, timeScale * 0.25);
-    displacement += snoise4D(detailCoord) * uMorphIntensity * 0.15;
+    // Smooth the displacement with a soft sine wave blend
+    float smoothBlend = sin(position.x * 1.5 + timeScale * 0.2) *
+                        cos(position.y * 1.3 + timeScale * 0.15) *
+                        sin(position.z * 1.4 + timeScale * 0.18);
+    displacement += smoothBlend * uMorphIntensity * 0.08;
 
-    // Tertiary micro detail
-    vec4 microCoord = vec4(position * 5.0, timeScale * 0.35);
-    displacement += snoise4D(microCoord) * uMorphIntensity * 0.05;
+    // Activity adds gentle pulsing, not noise
+    float pulse = sin(timeScale * 2.0) * uActivity * 0.02;
+    displacement += pulse;
 
     vDisplacement = displacement;
 
