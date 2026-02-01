@@ -117,9 +117,10 @@ class OpenClawdIntelligence {
         this.orb = new Orb();
         this.orb.addTo(this.scene);
 
-        // Create particles
-        this.particles = new Particles(150, this.renderer.getPixelRatio());
-        this.particles.addTo(this.scene);
+        // Create particles - minimal for elegance
+        this.particles = new Particles(25, this.renderer.getPixelRatio());
+        // Particles disabled for clean Apple-like aesthetic
+        // this.particles.addTo(this.scene);
 
         // Create shadow
         this.shadow = new Shadow();
