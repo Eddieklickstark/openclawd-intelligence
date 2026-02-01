@@ -1,0 +1,19 @@
+{
+  "name": "openclawd-intelligence",
+  "version": "1.0.0",
+  "description": "OpenClawd Intelligence - Premium AI Assistant UI",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.160.0"
+  },
+  "devDependencies": {
+    "vercel": "^50.9.6",
+    "vite": "^5.0.0",
+    "vite-plugin-glsl": "^1.2.1"
+  }
+}
